@@ -102,11 +102,11 @@
 
 ## ⚙️ File Structure
 
-├─ app.py # Main Streamlit application
-├─ requirements.txt # Python dependencies
-├─ README.md # Project documentation
-├─ NER.ipynb # Optional notebook for testing spaCy NER
-├─ NER_Output.png # Example output image
+├─ app.py            | # Main Streamlit application
+├─ requirements.txt  | # Python dependencies
+├─ README.md         | # Project documentation
+├─ NER.ipynb         | # Optional notebook for testing spaCy NER
+├─ NER_Output.png    | # Example output image
 
 ## 📝 Example
 

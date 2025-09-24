@@ -1,6 +1,6 @@
 # Named Entity Recognition (NER) 
 
-` A fully interactive **Named Entity Recognition (NER)** web application built with **Streamlit** and **spaCy**, allowing users to extract, visualize, and analyze entities from text, PDFs, or DOCX files. This app also supports **dynamic entity selection**, **session saving**, **AgGrid tables**, and **highlighted visualizations**.`
+` A fully interactive Named Entity Recognition (NER) web application built with Streamlit and spaCy, allowing users to extract, visualize, and analyze entities from text, PDFs, or DOCX files. This app also supports dynamic entity selection, session saving, AgGrid tables, and highlighted visualizations.`
 
 ---
 
@@ -49,14 +49,14 @@
 4. Download spaCy models:
 
     - python -m spacy download en_core_web_sm
-    # or for transformer-based model:
+      **or for transformer-based model:** 
     - python -m spacy download en_core_web_trf
 
 ## Usage
 
 1. Run the Streamlit app:
 
-`streamlit run app.py`
+   `streamlit run app.py`
 
 **Steps:**
 
@@ -66,7 +66,7 @@
 
     - Click Extract Entities.
 
-`View results in tabs:`
+**View results in tabs:**
 
     - Entities Table: Search, sort, and export entities
 
@@ -102,11 +102,11 @@
 
 ## ⚙️ File Structure
 
-├─ app.py              # Main Streamlit application
-├─ requirements.txt    # Python dependencies
-├─ README.md           # Project documentation
-├─ NER.ipynb           # Optional notebook for testing spaCy NER
-├─ NER_Output.png      # Example output image
+├─ app.py # Main Streamlit application
+├─ requirements.txt # Python dependencies
+├─ README.md # Project documentation
+├─ NER.ipynb # Optional notebook for testing spaCy NER
+├─ NER_Output.png # Example output image
 
 ## 📝 Example
 

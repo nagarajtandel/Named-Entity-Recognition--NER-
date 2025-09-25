@@ -2,5 +2,7 @@ streamlit
 spacy
 pandas
 altair
+st-aggrid
 PyPDF2
 python-docx
+python-3.11.8

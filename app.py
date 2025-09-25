@@ -6,13 +6,8 @@ from collections import Counter
 import altair as alt
 import json
 import subprocess
-
-# File handling libraries
 from PyPDF2 import PdfReader
 import docx
-
-# AgGrid
-from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
 # ---------------------------
 # Helpers: text extraction
@@ -20,10 +15,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 def extract_text_from_pdf(uploaded_file):
     try:
         reader = PdfReader(uploaded_file)
-        text = []
-        for page in reader.pages:
-            page_text = page.extract_text() or ""
-            text.append(page_text)
+        text = [page.extract_text() or "" for page in reader.pages]
         return "\n".join(text)
     except Exception as e:
         return f"[PDF extraction error] {e}"
@@ -37,7 +29,7 @@ def extract_text_from_docx(uploaded_file):
         return f"[DOCX extraction error] {e}"
 
 # ---------------------------
-# Setup UI + session
+# Page setup
 # ---------------------------
 st.set_page_config(page_title="Dynamic NER App", layout="wide")
 st.title("🌟 Dynamic Named Entity Recognition (NER) — Pro")
@@ -45,16 +37,14 @@ st.title("🌟 Dynamic Named Entity Recognition (NER) — Pro")
 if "saved_sessions" not in st.session_state:
     st.session_state.saved_sessions = []
 
-# Sidebar controls
+# Sidebar
 st.sidebar.header("Settings / Uploads")
-
 model_choice = st.sidebar.selectbox("spaCy model", ["en_core_web_sm", "en_core_web_trf"])
 uploaded_file = st.sidebar.file_uploader("Upload file (TXT, PDF, DOCX)", type=["txt","pdf","docx"])
 select_all_button = st.sidebar.button("Select All Entities")
 
 # ---------------------------
-# Auto-load / download SpaCy models
-# ---------------------------
+# Load SpaCy model
 @st.cache_resource(show_spinner=False)
 def load_model(name):
     try:
@@ -63,41 +53,24 @@ def load_model(name):
         with st.spinner(f"Downloading {name} model..."):
             subprocess.run(["python", "-m", "spacy", "download", name])
         return spacy.load(name)
-    except Exception as e:
-        st.error(f"Error loading model {name}: {e}")
-        return None
 
 nlp = load_model(model_choice)
-if nlp is None:
-    st.sidebar.error(f"Could not load spaCy model: {model_choice}")
-    st.stop()
 
 # ---------------------------
 # Entity colors
-# ---------------------------
 colors = {
-    'PERSON': 'linear-gradient(90deg, #7ee7f2, #0f62fe)',
-    'ORG': 'linear-gradient(90deg, #f28c8c, #e63946)',
-    'GPE': 'linear-gradient(90deg, #90be6d, #43aa8b)',
-    'LOC': 'linear-gradient(90deg, #f9c74f, #f9844a)',
-    'EVENT': 'linear-gradient(90deg, #f2c707, #dc9ce7)',
-    'DATE': 'linear-gradient(90deg,#aa9cde,#dc9ce7)',
-    'NORP': 'linear-gradient(90deg,#f8961e,#f3722c)',
-    'PRODUCT': 'linear-gradient(90deg,#577590,#4d908e)',
-    'WORK_OF_ART': 'linear-gradient(90deg,#9d4edd,#c77dff)',
-    'LANGUAGE': 'linear-gradient(90deg,#43aa8b,#90be6d)',
-    'MONEY': 'linear-gradient(90deg,#f94144,#f3722c)',
-    'QUANTITY': 'linear-gradient(90deg,#f8961e,#f9c74f)',
-    'PERCENT': 'linear-gradient(90deg,#90be6d,#43aa8b)',
-    'CARDINAL': 'linear-gradient(90deg,#577590,#4d908e)'
+    'PERSON':'#7ee7f2', 'ORG':'#f28c8c', 'GPE':'#90be6d', 'LOC':'#f9c74f',
+    'EVENT':'#f2c707', 'DATE':'#aa9cde', 'NORP':'#f8961e', 'PRODUCT':'#577590',
+    'WORK_OF_ART':'#9d4edd', 'LANGUAGE':'#43aa8b', 'MONEY':'#f94144',
+    'QUANTITY':'#f8961e', 'PERCENT':'#90be6d', 'CARDINAL':'#577590'
 }
 entity_options = list(colors.keys())
 
 # ---------------------------
-# Main layout: tabs
-# ---------------------------
+# Tabs
 tabs = st.tabs(["Input", "Entities Table", "Visualization", "Stats", "Saved Sessions"])
 
+# ---------- Input tab ----------
 with tabs[0]:
     st.header("Input Text")
     if uploaded_file:
@@ -128,14 +101,10 @@ with tabs[0]:
         st.session_state.selected_ents = entity_options.copy()
         st.experimental_rerun()
 
-# ---------------------------
-# Extraction and display
-# ---------------------------
+# ---------- Extraction ----------
 if extract_button and text:
     with st.spinner("Extracting entities..."):
         doc = nlp(text)
-
-        # filter entities by selected_ents
         filtered_ents = [ent for ent in doc.ents if ent.label_ in st.session_state.selected_ents]
 
         df = pd.DataFrame(
@@ -143,7 +112,7 @@ if extract_button and text:
             columns=["Text", "Start", "End", "Label"]
         )
 
-        # Save session snapshot
+        # Save session
         session_snapshot = {
             "text": text,
             "entities": df.to_dict(orient="records"),
@@ -152,65 +121,35 @@ if extract_button and text:
         }
         st.session_state.saved_sessions.append(session_snapshot)
 
-    # ✅ Success or warning message
     if filtered_ents:
         st.success("✅ Extraction completed successfully!")
     else:
         st.warning("⚠️ No entities found for the selected types.")
 
-    # ---------------------------
-    # Entities Table (AgGrid)
-    # ---------------------------
+    # ---------- Entities Table ----------
     with tabs[1]:
-        st.header("Entities Table (Searchable / Sortable)")
+        st.header("Entities Table")
         if df.empty:
             st.info("No entities detected for the selected types.")
         else:
-            gb = GridOptionsBuilder.from_dataframe(df)
-            gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-            gb.configure_side_bar()
-            gb.configure_default_column(filterable=True, sortable=True, resizable=True)
-            gb.configure_selection(selection_mode="single", use_checkbox=True)
-            gridOptions = gb.build()
+            st.dataframe(df)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button("Download CSV", csv, "entities_view.csv", "text/csv")
+            st.download_button("Download JSON", json.dumps(df.to_dict(orient="records")), "entities_view.json", "application/json")
 
-            grid_response = AgGrid(
-                df,
-                gridOptions=gridOptions,
-                data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-                update_mode=GridUpdateMode.NO_UPDATE,
-                enable_enterprise_modules=False,
-                fit_columns_on_grid_load=True
-            )
-
-            df_filtered = pd.DataFrame(grid_response["data"])
-
-            if not df_filtered.empty:
-                csv = df_filtered.to_csv(index=False).encode("utf-8")
-                st.download_button("Download CSV (current view)", csv, "entities_view.csv", "text/csv")
-                st.download_button(
-                    "Download JSON (current view)",
-                    json.dumps(df_filtered.to_dict(orient="records")),
-                    "entities_view.json",
-                    "application/json"
-                )
-
-    # ---------------------------
-    # Visualization
-    # ---------------------------
+    # ---------- Visualization ----------
     with tabs[2]:
         st.header("Entity Visualization")
         options_displacy = {
             "ents": st.session_state.selected_ents,
-            "colors": {k: v for k, v in colors.items() if k in st.session_state.selected_ents}
+            "colors": {k: v for k,v in colors.items() if k in st.session_state.selected_ents}
         }
         html = displacy.render(doc, style="ent", options=options_displacy, jupyter=False)
         height = max(300, len(filtered_ents) * 50)
         st.components.v1.html(html, height=height, scrolling=True)
         st.download_button("Download highlighted HTML", html, "highlighted_entities.html", "text/html")
 
-    # ---------------------------
-    # Stats
-    # ---------------------------
+    # ---------- Stats ----------
     with tabs[3]:
         st.header("Entity Statistics")
         if filtered_ents:
@@ -226,11 +165,9 @@ if extract_button and text:
         else:
             st.write("No entities to display statistics for.")
 
-# ---------------------------
-# Saved sessions tab
-# ---------------------------
+# ---------- Saved Sessions ----------
 with tabs[4]:
-    st.header("Saved Sessions (this run)")
+    st.header("Saved Sessions")
     if st.session_state.saved_sessions:
         for i, snap in enumerate(st.session_state.saved_sessions[::-1], 1):
             st.subheader(f"Session #{i}")
@@ -241,4 +178,4 @@ with tabs[4]:
                 st.session_state.selected_ents = snap.get("selected_ents", entity_options)
                 st.text_area("Loaded session text (read-only)", value=snap.get("text",""), height=200)
     else:
-        st.write("No saved sessions yet. Click 'Extract Entities' to create snapshots.")
+        st.write("No saved sessions yet.")

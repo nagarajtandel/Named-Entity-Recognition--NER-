@@ -4,3 +4,4 @@ pandas
 altair
 PyPDF2
 python-docx
+st-aggrid

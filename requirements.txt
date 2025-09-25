@@ -1,0 +1,7 @@
+streamlit
+spacy
+pandas
+altair
+st-aggrid
+PyPDF2
+python-docx

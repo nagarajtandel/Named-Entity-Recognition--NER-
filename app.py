@@ -5,6 +5,7 @@ from spacy import displacy
 from collections import Counter
 import altair as alt
 import json
+import subprocess
 
 # File handling libraries
 from PyPDF2 import PdfReader
@@ -51,7 +52,29 @@ model_choice = st.sidebar.selectbox("spaCy model", ["en_core_web_sm", "en_core_w
 uploaded_file = st.sidebar.file_uploader("Upload file (TXT, PDF, DOCX)", type=["txt","pdf","docx"])
 select_all_button = st.sidebar.button("Select All Entities")
 
+# ---------------------------
+# Auto-load / download SpaCy models
+# ---------------------------
+@st.cache_resource(show_spinner=False)
+def load_model(name):
+    try:
+        return spacy.load(name)
+    except OSError:
+        with st.spinner(f"Downloading {name} model..."):
+            subprocess.run(["python", "-m", "spacy", "download", name])
+        return spacy.load(name)
+    except Exception as e:
+        st.error(f"Error loading model {name}: {e}")
+        return None
+
+nlp = load_model(model_choice)
+if nlp is None:
+    st.sidebar.error(f"Could not load spaCy model: {model_choice}")
+    st.stop()
+
+# ---------------------------
 # Entity colors
+# ---------------------------
 colors = {
     'PERSON': 'linear-gradient(90deg, #7ee7f2, #0f62fe)',
     'ORG': 'linear-gradient(90deg, #f28c8c, #e63946)',
@@ -68,23 +91,7 @@ colors = {
     'PERCENT': 'linear-gradient(90deg,#90be6d,#43aa8b)',
     'CARDINAL': 'linear-gradient(90deg,#577590,#4d908e)'
 }
-
 entity_options = list(colors.keys())
-
-# ---------------------------
-# Load spaCy model safely
-# ---------------------------
-@st.cache_resource(show_spinner=False)
-def load_model(name):
-    try:
-        return spacy.load(name)
-    except Exception as e:
-        return None
-
-nlp = load_model(model_choice)
-if nlp is None:
-    st.sidebar.error(f"Model {model_choice} not found. Install with `python -m spacy download {model_choice}`.")
-    st.stop()
 
 # ---------------------------
 # Main layout: tabs
@@ -124,9 +131,6 @@ with tabs[0]:
 # ---------------------------
 # Extraction and display
 # ---------------------------
-# ---------------------------
-# Extraction and display
-# ---------------------------
 if extract_button and text:
     with st.spinner("Extracting entities..."):
         doc = nlp(text)
@@ -153,7 +157,6 @@ if extract_button and text:
         st.success("✅ Extraction completed successfully!")
     else:
         st.warning("⚠️ No entities found for the selected types.")
-
 
     # ---------------------------
     # Entities Table (AgGrid)
